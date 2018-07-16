@@ -66,14 +66,18 @@ static inline void ring_inc(struct libaio_data *ld, unsigned int *val,
 		*val = (*val + add) % ld->entries;
 }
 
+#define		GKSDS_KEY	((1ULL << 44) | (7ULL << 38))
+
 static int fio_libaio_prep(struct thread_data fio_unused *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
 
 	if (io_u->ddir == DDIR_READ)
-		io_prep_pread(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+		io_prep_pread(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen,
+				(io_u->offset & 0xFFFFFFFFFFull) | (GKSDS_KEY << 9));
 	else if (io_u->ddir == DDIR_WRITE)
-		io_prep_pwrite(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
+		io_prep_pwrite(&io_u->iocb, f->fd, io_u->xfer_buf, io_u->xfer_buflen,
+				(io_u->offset & 0xFFFFFFFFFFull) | (GKSDS_KEY << 9));
 	else if (ddir_sync(io_u->ddir))
 		io_prep_fsync(&io_u->iocb, f->fd);
 
